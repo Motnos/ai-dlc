@@ -542,6 +542,363 @@ describe('Board grid fit at all difficulties (AC-4)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Acceptance criteria: board scaling fix (fix-game-scaling)
+// ---------------------------------------------------------------------------
+// NOTE: jsdom has NO layout engine. These tests assert structure (class lists
+// and inline-style strings) only — never offsetWidth or getBoundingClientRect.
+// True visual "fills/fits nicely" is a HUMAN check in the running app (npm run
+// dev); jsdom cannot verify rendered layout.
+
+describe('fix-game-scaling: GameScreen root carries min-h-0', () => {
+  it('GameScreen root has flex-1 class', () => {
+    const { container } = render(<App />);
+    // The GameScreen root is the flex column that sits between the phone screen
+    // content wrapper and the board region.
+    const gameScreenRoot = container.querySelector('.flex-1.min-h-0.bg-zinc-900');
+    expect(gameScreenRoot).toBeInTheDocument();
+    expect((gameScreenRoot as HTMLElement).classList.contains('flex-1')).toBe(true);
+  });
+
+  it('GameScreen root has min-h-0 class (enables flex-column shrink)', () => {
+    const { container } = render(<App />);
+    const gameScreenRoot = container.querySelector('.flex-1.min-h-0.bg-zinc-900');
+    expect(gameScreenRoot).toBeInTheDocument();
+    expect((gameScreenRoot as HTMLElement).classList.contains('min-h-0')).toBe(true);
+  });
+
+  it('GameScreen root has overflow-hidden class', () => {
+    const { container } = render(<App />);
+    const gameScreenRoot = container.querySelector('.flex-1.min-h-0.bg-zinc-900');
+    expect(gameScreenRoot).toBeInTheDocument();
+    expect((gameScreenRoot as HTMLElement).classList.contains('overflow-hidden')).toBe(true);
+  });
+});
+
+describe('fix-game-scaling: Board outer region carries min-h-0 and min-w-0', () => {
+  it('Board outer region has flex-1 class', () => {
+    const { container } = render(<App />);
+    // The board outer region is the flex-1 div that wraps the fit wrapper and grid.
+    // It carries flex-1, min-h-0, min-w-0, items-center, justify-center.
+    const outerRegion = container.querySelector('.flex-1.min-h-0.min-w-0');
+    expect(outerRegion).toBeInTheDocument();
+    expect((outerRegion as HTMLElement).classList.contains('flex-1')).toBe(true);
+  });
+
+  it('Board outer region has min-h-0 class (allows region to shrink to bounded height)', () => {
+    const { container } = render(<App />);
+    const outerRegion = container.querySelector('.flex-1.min-h-0.min-w-0');
+    expect(outerRegion).toBeInTheDocument();
+    expect((outerRegion as HTMLElement).classList.contains('min-h-0')).toBe(true);
+  });
+
+  it('Board outer region has min-w-0 class', () => {
+    const { container } = render(<App />);
+    const outerRegion = container.querySelector('.flex-1.min-h-0.min-w-0');
+    expect(outerRegion).toBeInTheDocument();
+    expect((outerRegion as HTMLElement).classList.contains('min-w-0')).toBe(true);
+  });
+
+  it('Board outer region has items-center and justify-center for centering', () => {
+    const { container } = render(<App />);
+    const outerRegion = container.querySelector('.flex-1.min-h-0.min-w-0');
+    expect(outerRegion).toBeInTheDocument();
+    const el = outerRegion as HTMLElement;
+    expect(el.classList.contains('items-center')).toBe(true);
+    expect(el.classList.contains('justify-center')).toBe(true);
+  });
+
+  it('Board outer region has overflow-hidden class', () => {
+    const { container } = render(<App />);
+    const outerRegion = container.querySelector('.flex-1.min-h-0.min-w-0');
+    expect(outerRegion).toBeInTheDocument();
+    expect((outerRegion as HTMLElement).classList.contains('overflow-hidden')).toBe(true);
+  });
+});
+
+describe('fix-game-scaling: new fit wrapper exists and has required classes', () => {
+  it('fit wrapper exists as a div with w-full and h-full', () => {
+    const { container } = render(<App />);
+    // The fit wrapper fills the outer region and provides a definite size context
+    // for the grid's max-w-full / max-h-full. It carries w-full h-full min-h-0.
+    const fitWrapper = container.querySelector('.w-full.h-full.min-h-0');
+    expect(fitWrapper).toBeInTheDocument();
+  });
+
+  it('fit wrapper has items-center class', () => {
+    const { container } = render(<App />);
+    const fitWrapper = container.querySelector('.w-full.h-full.min-h-0');
+    expect(fitWrapper).toBeInTheDocument();
+    expect((fitWrapper as HTMLElement).classList.contains('items-center')).toBe(true);
+  });
+
+  it('fit wrapper has justify-center class', () => {
+    const { container } = render(<App />);
+    const fitWrapper = container.querySelector('.w-full.h-full.min-h-0');
+    expect(fitWrapper).toBeInTheDocument();
+    expect((fitWrapper as HTMLElement).classList.contains('justify-center')).toBe(true);
+  });
+
+  it('fit wrapper has min-h-0 class', () => {
+    const { container } = render(<App />);
+    const fitWrapper = container.querySelector('.w-full.h-full.min-h-0');
+    expect(fitWrapper).toBeInTheDocument();
+    expect((fitWrapper as HTMLElement).classList.contains('min-h-0')).toBe(true);
+  });
+
+  it('at least one ancestor of the grid div within the board carries items-center and justify-center', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv).toBeInTheDocument();
+    // Walk up from the grid div looking for an ancestor with both centering classes
+    let ancestor = gridDiv.parentElement;
+    let found = false;
+    while (ancestor && ancestor !== container) {
+      if (
+        ancestor.classList.contains('items-center') &&
+        ancestor.classList.contains('justify-center')
+      ) {
+        found = true;
+        break;
+      }
+      ancestor = ancestor.parentElement;
+    }
+    expect(found).toBe(true);
+  });
+});
+
+// WHY width is the single definite axis:
+// Setting only `style.width = '100%'` (one definite axis) while leaving height
+// auto lets `aspect-ratio` derive the height. `max-h-full` then actually binds
+// for square/tall boards (it caps a derived auto height and the browser shrinks
+// proportionally). If BOTH width AND height were definite (e.g. `w-full h-full`
+// classes), `aspect-ratio` would be ignored entirely per CSS Sizing spec, the
+// max-* caps would be no-ops, and the board would fill the full W×H box
+// regardless of cols/rows — wrong shape, top-aligned, not fitted. Width must
+// remain the only intentional axis so aspect-ratio stays authoritative.
+describe('fix-game-scaling: grid div single-axis sizing (inline width + no explicit height)', () => {
+  it('beginner: grid div has inline style.width === "100%" (single definite axis for aspect-ratio)', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv).toBeInTheDocument();
+    // width:100% is the ONLY explicit axis — aspect-ratio derives height from it
+    expect(gridDiv.style.width).toBe('100%');
+  });
+
+  it('beginner: grid div has inline style.height === "" (height is auto/derived, NOT pinned)', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv).toBeInTheDocument();
+    // height must NOT be set inline — it must come from aspect-ratio alone
+    expect(gridDiv.style.height).toBe('');
+  });
+
+  it('beginner: grid div does NOT carry h-full class (would defeat aspect-ratio)', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv).toBeInTheDocument();
+    expect(gridDiv.classList.contains('h-full')).toBe(false);
+  });
+
+  it('beginner: grid div does NOT carry w-full class (width comes from inline style, not class)', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv).toBeInTheDocument();
+    expect(gridDiv.classList.contains('w-full')).toBe(false);
+  });
+
+  it('intermediate: grid div retains inline style.width === "100%" and style.height === "" after difficulty switch', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    await user.selectOptions(select, 'intermediate');
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.width).toBe('100%');
+    expect(gridDiv.style.height).toBe('');
+  });
+
+  it('expert: grid div retains inline style.width === "100%" and style.height === "" after difficulty switch', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    await user.selectOptions(select, 'expert');
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.width).toBe('100%');
+    expect(gridDiv.style.height).toBe('');
+  });
+});
+
+describe('fix-game-scaling: grid div retains all pinned attributes at every difficulty', () => {
+  it('beginner: grid has inline style.display === "grid"', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.display).toBe('grid');
+  });
+
+  it('beginner (9x9): grid has inline style.aspectRatio === "9 / 9"', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.aspectRatio).toBe('9 / 9');
+  });
+
+  it('beginner: grid retains max-w-full, max-h-full, select-none, touch-manipulation', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.classList.contains('max-w-full')).toBe(true);
+    expect(gridDiv.classList.contains('max-h-full')).toBe(true);
+    expect(gridDiv.classList.contains('select-none')).toBe(true);
+    expect(gridDiv.classList.contains('touch-manipulation')).toBe(true);
+  });
+
+  it('intermediate (16x16): grid has inline style.aspectRatio === "16 / 16"', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    await user.selectOptions(select, 'intermediate');
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.display).toBe('grid');
+    expect(gridDiv.style.aspectRatio).toBe('16 / 16');
+    expect(gridDiv.classList.contains('max-w-full')).toBe(true);
+    expect(gridDiv.classList.contains('max-h-full')).toBe(true);
+    expect(gridDiv.classList.contains('select-none')).toBe(true);
+    expect(gridDiv.classList.contains('touch-manipulation')).toBe(true);
+  });
+
+  it('expert (30x16): grid has inline style.aspectRatio === "30 / 16"', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    await user.selectOptions(select, 'expert');
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.display).toBe('grid');
+    expect(gridDiv.style.aspectRatio).toBe('30 / 16');
+    expect(gridDiv.classList.contains('max-w-full')).toBe(true);
+    expect(gridDiv.classList.contains('max-h-full')).toBe(true);
+    expect(gridDiv.classList.contains('select-none')).toBe(true);
+    expect(gridDiv.classList.contains('touch-manipulation')).toBe(true);
+  });
+});
+
+describe('fix-game-scaling: grid div retains single-axis sizing + fit caps together', () => {
+  it('beginner: grid has inline width:100%, no inline height, and max-w-full + max-h-full caps simultaneously', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    // single definite axis: width only (inline style, not a class)
+    expect(gridDiv.style.width).toBe('100%');
+    // height must be auto/derived — not pinned inline — so aspect-ratio is authoritative
+    expect(gridDiv.style.height).toBe('');
+    // fit caps (allow max-h-full to actually clamp a derived auto height)
+    expect(gridDiv.classList.contains('max-w-full')).toBe(true);
+    expect(gridDiv.classList.contains('max-h-full')).toBe(true);
+  });
+
+  it('intermediate: grid retains inline width:100%, no inline height, and max-w-full + max-h-full after difficulty switch', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    await user.selectOptions(select, 'intermediate');
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.width).toBe('100%');
+    expect(gridDiv.style.height).toBe('');
+    expect(gridDiv.classList.contains('max-w-full')).toBe(true);
+    expect(gridDiv.classList.contains('max-h-full')).toBe(true);
+  });
+
+  it('expert: grid retains inline width:100%, no inline height, and max-w-full + max-h-full after difficulty switch', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    await user.selectOptions(select, 'expert');
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.width).toBe('100%');
+    expect(gridDiv.style.height).toBe('');
+    expect(gridDiv.classList.contains('max-w-full')).toBe(true);
+    expect(gridDiv.classList.contains('max-h-full')).toBe(true);
+  });
+});
+
+describe('fix-game-scaling: cell counts and cell attributes per difficulty', () => {
+  it('beginner: 81 cells, each with data-testid, data-state, and aspect-square', () => {
+    const { container } = render(<App />);
+    const cells = container.querySelectorAll('[data-testid^="cell-"]');
+    expect(cells.length).toBe(81); // 9 * 9
+    cells.forEach((cell) => {
+      expect(cell).toHaveAttribute('data-testid');
+      expect(cell).toHaveAttribute('data-state');
+      expect((cell as HTMLElement).classList.contains('aspect-square')).toBe(true);
+    });
+  });
+
+  it('intermediate: 256 cells, each with data-testid, data-state, and aspect-square', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    await user.selectOptions(select, 'intermediate');
+    const cells = container.querySelectorAll('[data-testid^="cell-"]');
+    expect(cells.length).toBe(256); // 16 * 16
+    cells.forEach((cell) => {
+      expect(cell).toHaveAttribute('data-testid');
+      expect(cell).toHaveAttribute('data-state');
+      expect((cell as HTMLElement).classList.contains('aspect-square')).toBe(true);
+    });
+  });
+
+  it('expert: 480 cells, each with data-testid, data-state, and aspect-square', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    await user.selectOptions(select, 'expert');
+    const cells = container.querySelectorAll('[data-testid^="cell-"]');
+    expect(cells.length).toBe(480); // 30 * 16
+    cells.forEach((cell) => {
+      expect(cell).toHaveAttribute('data-testid');
+      expect(cell).toHaveAttribute('data-state');
+      expect((cell as HTMLElement).classList.contains('aspect-square')).toBe(true);
+    });
+  });
+});
+
+describe('fix-game-scaling: failure cases (negative tests)', () => {
+  it('grid div has inline style.width === "100%" (intentional single-axis anchor, not a pixel value)', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    // width:100% is the correct single-axis anchor — no hard-coded pixel width allowed
+    expect(gridDiv.style.width).toBe('100%');
+    // Confirm it is NOT a pixel value (e.g. "360px")
+    expect(gridDiv.style.width.endsWith('px')).toBe(false);
+  });
+
+  it('grid div does NOT have a direct pixel height in its inline style', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    // height must be '' (auto/derived from aspect-ratio) — never a px value
+    expect(gridDiv.style.height).toBe('');
+  });
+
+  it('fit wrapper is NOT the direct parent of the outer region (correct nesting order)', () => {
+    const { container } = render(<App />);
+    // The outer region (flex-1 min-h-0 min-w-0) must contain the fit wrapper,
+    // not the other way around.
+    const outerRegion = container.querySelector('.flex-1.min-h-0.min-w-0') as HTMLElement;
+    const fitWrapper = container.querySelector('.w-full.h-full.min-h-0') as HTMLElement;
+    expect(outerRegion).toBeInTheDocument();
+    expect(fitWrapper).toBeInTheDocument();
+    // fitWrapper must be a descendant of outerRegion
+    expect(outerRegion.contains(fitWrapper)).toBe(true);
+    // outerRegion must NOT be a descendant of fitWrapper
+    expect(fitWrapper.contains(outerRegion)).toBe(false);
+  });
+
+  it('grid div is a descendant of the fit wrapper', () => {
+    const { container } = render(<App />);
+    const fitWrapper = container.querySelector('.w-full.h-full.min-h-0') as HTMLElement;
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(fitWrapper).toBeInTheDocument();
+    expect(gridDiv).toBeInTheDocument();
+    expect(fitWrapper.contains(gridDiv)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Failure cases
 // ---------------------------------------------------------------------------
 

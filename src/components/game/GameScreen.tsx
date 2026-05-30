@@ -11,7 +11,7 @@ export function GameScreen({ game }: GameScreenProps): JSX.Element {
   const { state, reveal, flag, chord, newGame } = game;
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden bg-zinc-900">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-zinc-900">
       <GameHeader
         state={state}
         onReset={() => newGame(state.difficulty)}
