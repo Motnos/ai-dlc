@@ -8,12 +8,12 @@ import type { Tab } from './components/ui/TabBar';
 import { useMinesweeper } from './hooks/useMinesweeper';
 import { usePlayerId } from './hooks/usePlayerId';
 import { useGamePersistence } from './hooks/useGamePersistence';
-import { memoryRepository } from './persistence/memoryRepository';
+import { apiRepository } from './persistence/apiRepository';
 
 function App(): JSX.Element {
   const playerId = usePlayerId();
   const game = useMinesweeper();
-  const repository = memoryRepository;
+  const repository = apiRepository;
 
   useGamePersistence({
     repository,
