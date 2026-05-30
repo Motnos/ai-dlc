@@ -67,8 +67,16 @@ If step 4 is `RESULT: FAIL` or step 5 is `VERDICT: NEEDS_WORK`:
 
 ## 6. Finish
 On `VERDICT: SHIP`:
-- Commit the work on the feature branch. Do NOT push and do NOT merge. Use a
-  message that summarises the change and references the spec, and follow the
-  repo's commit conventions.
+- Write a DURABLE ship record to `docs/ship/<slug>.md` (NOT inside the gitignored
+  `.pipeline/`). This committed file is the proof that the change went through the
+  pipeline; CI requires it (see `.github/workflows/ship-compliance.yml`). Distil it
+  from the `.pipeline/<slug>/` handoff files. It MUST contain:
+  - first line `VERDICT: SHIP`
+  - the one-line feature request
+  - a short spec summary, the key files changed, the test result (`RESULT: PASS`
+    + test count), and the reviewer's one-line verdict.
+- Commit the work on the feature branch INCLUDING `docs/ship/<slug>.md`. Do NOT
+  push and do NOT merge. Use a message that summarises the change and references
+  the spec, and follow the repo's commit conventions.
 - Report the final verdict and the branch name. The branch is left for the
   human's review. Merging is always a human decision.

@@ -3,3 +3,10 @@
 
 # Personal, per-developer Claude Code settings — not shared.
 .claude/settings.local.json
+
+# Build / dependency / runtime artifacts (present when an app is scaffolded
+# on a feature branch). Never commit these to any branch.
+node_modules/
+dist/
+data/
+*.db

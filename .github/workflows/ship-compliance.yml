@@ -1,0 +1,73 @@
+name: ship-process-compliance
+
+# Declines pull requests that change product code without going through the
+# /ship pipeline. The pipeline's handoff files (.pipeline/) are gitignored and
+# never committed, so the durable, committed proof is the ship record that
+# /ship writes to docs/ship/<slug>.md (first line `VERDICT: SHIP`). This gate
+# requires such a record whenever a PR touches product code.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  ship-record:
+    name: Require a /ship record for code changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify a /ship record accompanies code changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          # Paths that count as "product code" and therefore require a ship record.
+          # Adjust this for your repo's layout when you adopt the scaffold.
+          CODE_REGEX='^(src/|server/|lib/|app/|packages/)'
+
+          echo "Comparing ${BASE_SHA}...${HEAD_SHA}"
+          CHANGED="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
+          echo "----- changed files -----"
+          echo "${CHANGED}"
+          echo "-------------------------"
+
+          CODE_CHANGES="$(echo "${CHANGED}" | grep -E "${CODE_REGEX}" || true)"
+          if [ -z "${CODE_CHANGES}" ]; then
+            echo "No product-code changes detected — /ship record not required. ✅"
+            exit 0
+          fi
+
+          echo "Product-code changes detected:"
+          echo "${CODE_CHANGES}"
+
+          # A new or modified ship record under docs/ship/<slug>.md
+          SHIP_RECORDS="$(echo "${CHANGED}" | grep -E '^docs/ship/.+\.md$' || true)"
+          if [ -z "${SHIP_RECORDS}" ]; then
+            echo "::error::This PR changes product code but adds no /ship record under docs/ship/. It does not appear to have followed the /ship process. Run /ship and commit the generated docs/ship/<slug>.md."
+            exit 1
+          fi
+
+          # At least one changed ship record must declare a SHIP verdict.
+          OK=0
+          for f in ${SHIP_RECORDS}; do
+            if [ -f "${f}" ] && grep -qiE '^VERDICT:[[:space:]]*SHIP[[:space:]]*$' "${f}"; then
+              echo "Found 'VERDICT: SHIP' in ${f}"
+              OK=1
+            fi
+          done
+
+          if [ "${OK}" -ne 1 ]; then
+            echo "::error::A docs/ship/ record was changed but none has 'VERDICT: SHIP' as its first line. The pipeline's reviewer must have returned SHIP."
+            exit 1
+          fi
+
+          echo "/ship process compliance satisfied. ✅"

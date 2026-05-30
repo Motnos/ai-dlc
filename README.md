@@ -78,6 +78,7 @@ Reads the spec, changes, and test results, then inspects the real diff — inclu
 - **Reviewer can BLOCK on green tests.** Passing tests are not sufficient — if the code is wrong, the reviewer issues `NEEDS_WORK` or `BLOCK` with `file:line` specifics. The reviewer's only write is its verdict file.
 - **Branch isolation, no auto-merge.** Work happens on a `feature/<slug>` branch in its own `.pipeline/<slug>/` directory. On `SHIP` the pipeline commits to that branch (no push, no merge) and leaves it for a human to review and merge.
 - **No scope creep.** The coder implements only the spec and the review findings.
+- **Committed proof of process.** On `SHIP`, the pipeline also commits a durable record to `docs/ship/<slug>.md` (the `.pipeline/` handoff files are gitignored and can't prove anything in a PR). A CI gate requires that record — see [Process compliance (CI)](#process-compliance-ci).
 
 > The reviewer and tester boundaries are enforced by instruction, not by the tool sandbox — their tools technically permit more, but the agent prompts forbid it. Treat the prompts as the contract.
 
@@ -101,7 +102,7 @@ The orchestrator derives a slug, switches to a `feature/<slug>` branch, and runs
 2. **OPEN QUESTIONS in the spec** — the planner marked it `BLOCKED`; answer and re-invoke.
 3. **Failing tests / `NEEDS_WORK`** — fixed automatically for up to two cycles, then stopped for you if unresolved.
 
-On `SHIP`, `/ship` commits the work to the feature branch and reports the verdict. The branch is left for your review — you decide whether to merge.
+On `SHIP`, `/ship` commits the work to the feature branch — including a durable `docs/ship/<slug>.md` record of the run — and reports the verdict. The branch is left for your review; you decide whether to merge.
 
 ### Auto mode
 
@@ -113,16 +114,26 @@ Prefix the request with `--auto` (or `auto:`) to skip the spec sign-off pause fo
 
 Auto mode bypasses **only** the discretionary spec pause. Every hard gate still applies: a `BLOCKED` spec, failing tests after the rework cycles, and `NEEDS_WORK`/`BLOCK` verdicts all stop the run, and nothing is ever merged.
 
+## Process compliance (CI)
+
+The pipeline runs locally and its handoff files (`.pipeline/`) are gitignored — so by themselves they leave no evidence in a pull request that `/ship` was actually used. To close that gap:
+
+- On `SHIP`, `/ship` commits a durable **ship record** to `docs/ship/<slug>.md` whose first line is `VERDICT: SHIP` (see [`docs/ship/README.md`](docs/ship/README.md) for the format).
+- The **`ship-process-compliance`** GitHub Action (`.github/workflows/ship-compliance.yml`) runs on every pull request. If the PR changes **product code** (by default anything under `src/`, `server/`, `lib/`, `app/`, `packages/`) but adds or updates **no** `docs/ship/*.md` record with a `VERDICT: SHIP`, the check **fails** — declining PRs that clearly didn't follow the process.
+
+Tune the `CODE_REGEX` in the workflow to match your repo's layout. The gate is structural (it proves a record exists for the change); it is not a substitute for human review of that record.
+
 ## Adopting it in your project
 
 Copy the `.claude/` directory into the root of the target repo and fill in `conventions.md`:
 
 ```
 cp -r .claude/ /path/to/your/repo/
+cp -r .github/ /path/to/your/repo/          # the ship-compliance workflow
 echo ".pipeline/" >> /path/to/your/repo/.gitignore
 ```
 
-Then edit `.claude/conventions.md` with your stack, test framework, lint/type-check commands, code-style exemplars, and security rules. The agents fall back to inferring from the codebase when a section is blank, but filling it in is the highest-leverage step for consistency across developers. The `.pipeline/` directory holds transient per-run handoff artifacts and should stay gitignored.
+Then edit `.claude/conventions.md` with your stack, test framework, lint/type-check commands, code-style exemplars, and security rules. The agents fall back to inferring from the codebase when a section is blank, but filling it in is the highest-leverage step for consistency across developers. The `.pipeline/` directory holds transient per-run handoff artifacts and should stay gitignored; the committed `docs/ship/` records are what the CI gate checks. Adjust `CODE_REGEX` in `.github/workflows/ship-compliance.yml` to match your repo's code layout.
 
 ## Repository layout
 
@@ -136,6 +147,15 @@ Then edit `.claude/conventions.md` with your stack, test framework, lint/type-ch
     tester.md        # Stage 3: test writer and runner (sonnet)
     reviewer.md      # Stage 4: final review, writes verdict only (opus)
   conventions.md     # Shared house rules — fill this in per repo
+
+.github/
+  workflows/
+    ship-compliance.yml  # CI: declines code PRs with no docs/ship/ record
+
+docs/
+  ship/              # Committed proof-of-process records (one per shipped feature)
+    README.md        # record format
+    <slug>.md        # written by /ship on SHIP -> first line VERDICT: SHIP
 
 .gitignore           # Ignores .pipeline/
 
