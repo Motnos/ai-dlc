@@ -3,3 +3,8 @@
 
 # Personal, per-developer Claude Code settings — not shared.
 .claude/settings.local.json
+
+node_modules/
+dist/
+data/
+*.db
