@@ -1,0 +1,5 @@
+# Transient AI-DLC pipeline handoff artifacts (one subdir per run/branch).
+.pipeline/
+
+# Personal, per-developer Claude Code settings — not shared.
+.claude/settings.local.json
