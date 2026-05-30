@@ -297,14 +297,14 @@ export function toggleFlag(state: GameState, row: number, col: number): GameStat
   const cell = state.cells[row][col];
   if (cell.state === 'revealed') return state;
 
-  const newCellState = cell.state === 'hidden' ? 'flagged' : 'hidden';
+  const newCellState: 'flagged' | 'hidden' = cell.state === 'hidden' ? 'flagged' : 'hidden';
   const flagDelta = newCellState === 'flagged' ? 1 : -1;
 
   const newCells = state.cells.map((rowArr, r) =>
     r !== row
       ? rowArr
       : rowArr.map((c, ci) =>
-          ci !== col ? c : { ...c, state: newCellState as const },
+          ci !== col ? c : { ...c, state: newCellState },
         ),
   );
 

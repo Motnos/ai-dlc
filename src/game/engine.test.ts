@@ -1,7 +1,7 @@
 import { createGame, revealCell, toggleFlag, chordCell, checkWin, minesRemaining } from './engine';
 import { createRng } from './rng';
 import { DIFFICULTY } from './difficulty';
-import type { Difficulty, GameState } from './types';
+import type { Difficulty, GameState, GameStatus } from './types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -190,10 +190,8 @@ describe('First-click safety', () => {
             // no neighbor of clicked cell is a mine
             const neighbors = neighborCoords(state, clickR, clickC);
             for (const [nr, nc] of neighbors) {
-              expect(state.cells[nr][nc].isMine).toBe(
-                false,
-                `seed ${seed} diff ${diff}: neighbor (${nr},${nc}) of click (${clickR},${clickC}) is a mine`,
-              );
+              // seed ${seed} diff ${diff}: neighbor must not be a mine
+              expect(state.cells[nr][nc].isMine).toBe(false);
             }
           }
         });
@@ -636,7 +634,7 @@ describe('Win transition', () => {
       }
 
       // Reveal all hidden non-mine cells
-      let prevStatus = state.status;
+      let prevStatus: GameStatus = state.status;
       for (let r = 0; r < state.rows && prevStatus === 'playing'; r++) {
         for (let c = 0; c < state.cols && prevStatus === 'playing'; c++) {
           const cell = state.cells[r][c];
