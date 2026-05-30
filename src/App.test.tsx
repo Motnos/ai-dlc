@@ -351,6 +351,197 @@ describe('Board grid structure', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Acceptance criteria: phone frame deterministic size (fix-phone-resize)
+// ---------------------------------------------------------------------------
+
+describe('IPhoneFrame deterministic size (AC-1)', () => {
+  it('outer bezel has a non-empty inline style.aspectRatio', () => {
+    const { container } = render(<App />);
+    const frame = container.querySelector('.bg-zinc-900.rounded-\\[3rem\\]') as HTMLElement;
+    expect(frame).toBeInTheDocument();
+    expect(frame.style.aspectRatio).toBeTruthy();
+    expect(frame.style.aspectRatio).not.toBe('');
+  });
+
+  it('outer bezel inline style.aspectRatio is exactly "9 / 19.5"', () => {
+    const { container } = render(<App />);
+    const frame = container.querySelector('.bg-zinc-900.rounded-\\[3rem\\]') as HTMLElement;
+    expect(frame.style.aspectRatio).toBe('9 / 19.5');
+  });
+
+  it('outer bezel has a non-empty inline style.height', () => {
+    const { container } = render(<App />);
+    const frame = container.querySelector('.bg-zinc-900.rounded-\\[3rem\\]') as HTMLElement;
+    expect(frame.style.height).toBeTruthy();
+    expect(frame.style.height).not.toBe('');
+  });
+
+  it('outer bezel inline style.height contains a viewport unit (dvh) or min()', () => {
+    const { container } = render(<App />);
+    const frame = container.querySelector('.bg-zinc-900.rounded-\\[3rem\\]') as HTMLElement;
+    // The height must be viewport-derived, not a fixed pixel value
+    const height = frame.style.height;
+    expect(height.includes('dvh') || height.includes('min(')).toBe(true);
+  });
+
+  it('outer bezel inline style.height is exactly "min(92dvh, 900px)"', () => {
+    const { container } = render(<App />);
+    const frame = container.querySelector('.bg-zinc-900.rounded-\\[3rem\\]') as HTMLElement;
+    expect(frame.style.height).toBe('min(92dvh, 900px)');
+  });
+
+  it('outer bezel has no inline maxHeight (old sizing key is gone)', () => {
+    const { container } = render(<App />);
+    const frame = container.querySelector('.bg-zinc-900.rounded-\\[3rem\\]') as HTMLElement;
+    // The old style used maxHeight; after the fix it must be empty/absent
+    expect(frame.style.maxHeight).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Acceptance criteria: tab-switch frame stability (fix-phone-resize AC-2)
+// ---------------------------------------------------------------------------
+
+describe('IPhoneFrame tab-switch stability (AC-2)', () => {
+  it('frame style.height is unchanged after switching from Game to History tab', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+
+    const frame = container.querySelector('.bg-zinc-900.rounded-\\[3rem\\]') as HTMLElement;
+    const heightBefore = frame.style.height;
+
+    const historyTab = screen.getByRole('button', { name: /history/i });
+    await user.click(historyTab);
+    await screen.findByText(/no games yet/i);
+
+    expect(frame.style.height).toBe(heightBefore);
+  });
+
+  it('frame style.aspectRatio is unchanged after switching from Game to History tab', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+
+    const frame = container.querySelector('.bg-zinc-900.rounded-\\[3rem\\]') as HTMLElement;
+    const aspectRatioBefore = frame.style.aspectRatio;
+
+    const historyTab = screen.getByRole('button', { name: /history/i });
+    await user.click(historyTab);
+    await screen.findByText(/no games yet/i);
+
+    expect(frame.style.aspectRatio).toBe(aspectRatioBefore);
+  });
+
+  it('frame className is unchanged after switching from Game to History tab', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+
+    const frame = container.querySelector('.bg-zinc-900.rounded-\\[3rem\\]') as HTMLElement;
+    const classNameBefore = frame.className;
+
+    const historyTab = screen.getByRole('button', { name: /history/i });
+    await user.click(historyTab);
+    await screen.findByText(/no games yet/i);
+
+    expect(frame.className).toBe(classNameBefore);
+  });
+
+  it('frame style.height, style.aspectRatio and className are all stable across tab switch', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+
+    const frame = container.querySelector('.bg-zinc-900.rounded-\\[3rem\\]') as HTMLElement;
+    const heightBefore = frame.style.height;
+    const aspectRatioBefore = frame.style.aspectRatio;
+    const classNameBefore = frame.className;
+
+    const historyTab = screen.getByRole('button', { name: /history/i });
+    await user.click(historyTab);
+    await screen.findByText(/no games yet/i);
+
+    expect(frame.style.height).toBe(heightBefore);
+    expect(frame.style.aspectRatio).toBe(aspectRatioBefore);
+    expect(frame.className).toBe(classNameBefore);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Acceptance criteria: board grid fit (fix-phone-resize AC-4)
+// ---------------------------------------------------------------------------
+
+describe('Board grid fit at all difficulties (AC-4)', () => {
+  it('beginner: grid div carries max-w-full and max-h-full', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.classList.contains('max-w-full')).toBe(true);
+    expect(gridDiv.classList.contains('max-h-full')).toBe(true);
+  });
+
+  it('beginner: grid div retains inline style.display === "grid"', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.display).toBe('grid');
+  });
+
+  it('beginner (9x9): grid div has inline style.aspectRatio === "9 / 9"', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.aspectRatio).toBe('9 / 9');
+  });
+
+  it('beginner: grid retains select-none and touch-manipulation classes', () => {
+    const { container } = render(<App />);
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv).toBeInTheDocument();
+    expect(gridDiv.classList.contains('select-none')).toBe(true);
+    expect(gridDiv.classList.contains('touch-manipulation')).toBe(true);
+  });
+
+  it('intermediate (16x16): grid div has inline style.aspectRatio === "16 / 16"', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    await user.selectOptions(select, 'intermediate');
+
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.aspectRatio).toBe('16 / 16');
+    expect(gridDiv.classList.contains('max-w-full')).toBe(true);
+    expect(gridDiv.classList.contains('max-h-full')).toBe(true);
+    expect(gridDiv.style.display).toBe('grid');
+  });
+
+  it('expert (30x16): grid div has inline style.aspectRatio === "30 / 16"', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    await user.selectOptions(select, 'expert');
+
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+    expect(gridDiv.style.aspectRatio).toBe('30 / 16');
+    expect(gridDiv.classList.contains('max-w-full')).toBe(true);
+    expect(gridDiv.classList.contains('max-h-full')).toBe(true);
+    expect(gridDiv.style.display).toBe('grid');
+  });
+
+  it('aspect ratio updates correctly when switching difficulty (beginner -> expert -> beginner)', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+
+    const select = screen.getByRole('combobox', { name: /difficulty/i });
+    const gridDiv = container.querySelector('.select-none.touch-manipulation') as HTMLElement;
+
+    expect(gridDiv.style.aspectRatio).toBe('9 / 9');
+
+    await user.selectOptions(select, 'expert');
+    expect(gridDiv.style.aspectRatio).toBe('30 / 16');
+
+    await user.selectOptions(select, 'beginner');
+    expect(gridDiv.style.aspectRatio).toBe('9 / 9');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Failure cases
 // ---------------------------------------------------------------------------
 

@@ -10,7 +10,7 @@ export function IPhoneFrame({ children }: IPhoneFrameProps): JSX.Element {
   return (
     <div
       className="relative bg-zinc-900 rounded-[3rem] ring-1 ring-white/10 shadow-2xl p-[0.6rem]"
-      style={{ aspectRatio: '9/19.5', maxHeight: 'calc(100dvh - 2rem)', width: 'auto' }}
+      style={{ aspectRatio: '9 / 19.5', height: 'min(92dvh, 900px)', width: 'auto' }}
     >
       {/* Side buttons (decorative) */}
       <div className="absolute -left-[3px] top-24 w-[3px] h-8 bg-zinc-700 rounded-l-sm" />

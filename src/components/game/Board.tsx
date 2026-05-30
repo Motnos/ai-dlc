@@ -16,8 +16,8 @@ export function Board({ state, onReveal, onFlag, onChord }: BoardProps): JSX.Ele
       onContextMenu={(e) => e.preventDefault()}
     >
       <div
-        className="w-full select-none touch-manipulation"
-        style={{ display: 'grid', gridTemplateColumns: `repeat(${state.cols}, minmax(0, 1fr))` }}
+        className="max-w-full max-h-full select-none touch-manipulation"
+        style={{ display: 'grid', gridTemplateColumns: `repeat(${state.cols}, minmax(0, 1fr))`, aspectRatio: `${state.cols} / ${state.rows}` }}
       >
         {state.cells.map((row, r) =>
           row.map((cell, c) => (
